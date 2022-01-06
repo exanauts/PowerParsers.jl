@@ -1,0 +1,9 @@
+name = "PowerParsers"
+uuid = "a3ae3258-2e5b-46b9-96ee-744883559e61"
+authors = ["fpacaud <fpacaud@anl.gov>"]
+version = "0.1.0"
+
+[deps]
+InlineStrings = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+Memento = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+PowerFlowData = "dd99e9e3-7471-40fc-b48d-a10501125371"
