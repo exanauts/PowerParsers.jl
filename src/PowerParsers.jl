@@ -24,7 +24,7 @@ end
 function power_parse(datafile::String)
     if endswith(datafile, ".raw")
         return _parse_psse(datafile)
-    elseif endswith(datafile, ".raw")
+    elseif endswith(datafile, ".m")
         return _parse_matpower(datafile)
     else
         error("Supported extensions are `.raw` (PSSE) and `.m` (MATPOWER)")
