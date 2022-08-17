@@ -8,6 +8,9 @@
 function parse_matpower(io::IO; validate=true)::Dict
     mp_data = _parse_matpower_string(read(io, String))
     pm_data = _matpower_to_powermodels!(mp_data)
+    if validate
+        correct_network_data!(pm_data)
+    end
     return pm_data
 end
 
@@ -122,7 +125,7 @@ const _mp_switch_columns = [
 
 ""
 function _parse_matpower_string(data_string::String)
-    matlab_data, func_name, colnames = parse_matlab_string(data_string, extended=true)
+    matlab_data, func_name, colnames = _IM.parse_matlab_string(data_string, extended=true)
 
     case = Dict{String,Any}()
 
@@ -152,8 +155,8 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.bus")
         buses = []
         for bus_row in matlab_data["mpc.bus"]
-            bus_data = row_to_typed_dict(bus_row, _mp_bus_columns)
-            bus_data["index"] = check_type(Int, bus_row[1])
+            bus_data = _IM.row_to_typed_dict(bus_row, _mp_bus_columns)
+            bus_data["index"] = _IM.check_type(Int, bus_row[1])
             bus_data["source_id"] = ["bus", bus_data["index"]]
             push!(buses, bus_data)
         end
@@ -165,7 +168,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.gen")
         gens = []
         for (i, gen_row) in enumerate(matlab_data["mpc.gen"])
-            gen_data = row_to_typed_dict(gen_row, _mp_gen_columns)
+            gen_data = _IM.row_to_typed_dict(gen_row, _mp_gen_columns)
             gen_data["index"] = i
             gen_data["source_id"] = ["gen", i]
             push!(gens, gen_data)
@@ -178,7 +181,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.branch")
         branches = []
         for (i, branch_row) in enumerate(matlab_data["mpc.branch"])
-            branch_data = row_to_typed_dict(branch_row, _mp_branch_columns)
+            branch_data = _IM.row_to_typed_dict(branch_row, _mp_branch_columns)
             branch_data["index"] = i
             branch_data["source_id"] = ["branch", i]
             push!(branches, branch_data)
@@ -191,7 +194,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.dcline")
         dclines = []
         for (i, dcline_row) in enumerate(matlab_data["mpc.dcline"])
-            dcline_data = row_to_typed_dict(dcline_row, _mp_dcline_columns)
+            dcline_data = _IM.row_to_typed_dict(dcline_row, _mp_dcline_columns)
             dcline_data["index"] = i
             dcline_data["source_id"] = ["dcline", i]
             push!(dclines, dcline_data)
@@ -202,7 +205,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.storage")
         storage = []
         for (i, storage_row) in enumerate(matlab_data["mpc.storage"])
-            storage_data = row_to_typed_dict(storage_row, _mp_storage_columns)
+            storage_data = _IM.row_to_typed_dict(storage_row, _mp_storage_columns)
             storage_data["index"] = i
             storage_data["source_id"] = ["storage", i]
             push!(storage, storage_data)
@@ -213,7 +216,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.switch")
         switch = []
         for (i, switch_row) in enumerate(matlab_data["mpc.switch"])
-            switch_data = row_to_typed_dict(switch_row, _mp_switch_columns)
+            switch_data = _IM.row_to_typed_dict(switch_row, _mp_switch_columns)
             switch_data["index"] = i
             switch_data["source_id"] = ["switch", i]
             push!(switch, switch_data)
@@ -224,7 +227,7 @@ function _parse_matpower_string(data_string::String)
     if haskey(matlab_data, "mpc.bus_name")
         bus_names = []
         for (i, bus_name_row) in enumerate(matlab_data["mpc.bus_name"])
-            bus_name_data = row_to_typed_dict(bus_name_row, _mp_bus_name_columns)
+            bus_name_data = _IM.row_to_typed_dict(bus_name_row, _mp_bus_name_columns)
             bus_name_data["index"] = i
             bus_name_data["source_id"] = ["bus_name", i]
             push!(bus_names, bus_name_data)
@@ -278,7 +281,7 @@ function _parse_matpower_string(data_string::String)
                 end
                 tbl = []
                 for (i, row) in enumerate(matlab_data[k])
-                    row_data = row_to_dict(row, column_names)
+                    row_data = _IM.row_to_dict(row, column_names)
                     row_data["index"] = i
                     row_data["source_id"] = [case_name, i]
                     push!(tbl, row_data)
@@ -298,8 +301,8 @@ end
 
 ""
 function _mp_cost_data(cost_row)
-    ncost = check_type(Int, cost_row[4])
-    model = check_type(Int, cost_row[1])
+    ncost = _IM.check_type(Int, cost_row[4])
+    model = _IM.check_type(Int, cost_row[1])
 
     if model == 1
         nr_parameters = ncost*2
@@ -309,15 +312,15 @@ function _mp_cost_data(cost_row)
 
     cost_data = Dict(
         "model" => model,
-        "startup" => check_type(Float64, cost_row[2]),
-        "shutdown" => check_type(Float64, cost_row[3]),
+        "startup" => _IM.check_type(Float64, cost_row[2]),
+        "shutdown" => _IM.check_type(Float64, cost_row[3]),
         "ncost" => ncost,
-        "cost" => [check_type(Float64, x) for x in cost_row[5:5+nr_parameters-1]]
+        "cost" => [_IM.check_type(Float64, x) for x in cost_row[5:5+nr_parameters-1]]
     )
 
     #=
     # skip this literal interpretation, as its hard to invert
-    cost_values = [check_type(Float64, x) for x in cost_row[5:length(cost_row)]]
+    cost_values = [_IM.check_type(Float64, x) for x in cost_row[5:length(cost_row)]]
     if cost_data["model"] == 1:
         if length(cost_values)%2 != 0
             Memento.error(_LOGGER, "incorrect matpower file, odd number of pwl cost function values")
@@ -379,7 +382,7 @@ function _matpower_to_powermodels!(mp_data::Dict{String,<:Any})
     _split_loads_shunts!(pm_data)
 
     # use once available
-    arrays_to_dicts!(pm_data)
+    _IM.arrays_to_dicts!(pm_data)
 
     for optional in ["dcline", "load", "shunt", "storage", "switch"]
         if length(pm_data[optional]) == 0
@@ -704,7 +707,7 @@ end
 
 "Export power network data in the matpower format"
 function export_matpower(io::IO, data::Dict{String,Any})
-    if ismultinetwork(data)
+    if _IM.ismultinetwork(data)
         Memento.error(_LOGGER, "export_matpower does not yet support multinetwork data")
     end
 
@@ -836,7 +839,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         if idx != gen["index"]
             Memento.warn(_LOGGER, "The index of the generator does not match the matpower assigned index. Any data that uses generator indexes for reference is corrupted.");
         end
-        println(io,
+        println(io, 
             "\t", gen["gen_bus"],
             "\t", _get_default(gen, "pg"),
             "\t", _get_default(gen, "qg"),
@@ -942,7 +945,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
     println(io, "];")
     println(io)
 
-    if length(dclines) > 0
+    if length(dclines) > 0 
         # print the dcline data
         println(io, "%% dcline data")
         println(io, "%    f_bus    t_bus    status    Pf    Pt    Qf    Qt    Vf    Vt    Pmin    Pmax    QminF    QmaxF    QminT    QmaxT    loss0    loss1")

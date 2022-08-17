@@ -1,34 +1,38 @@
 module PowerParsers
 
-import PowerFlowData
 
+import Memento
 
-include("MatpowerParser/MatpowerParser.jl")
+import InfrastructureModels
+const _IM = InfrastructureModels
 
-#=
-    MATPOWER
-=#
+const _LOGGER = Memento.getlogger(@__MODULE__)
 
-function _parse_matpower(datafile::String)
-    return MatpowerParser.parse_network(datafile)
+# Register the module level logger at runtime so that folks can access the logger via `getlogger(PowerModels)`
+# NOTE: If this line is not included then the precompiled `PowerModels._LOGGER` won't be registered at runtime.
+__init__() = Memento.register(_LOGGER)
+
+"Suppresses information and warning messages output by PowerModels, for fine grained control use the Memento package"
+function silence()
+    Memento.info(_LOGGER, "Suppressing information and warning messages for the rest of this session.  Use the Memento package for more fine-grained control of logging.")
+    Memento.setlevel!(Memento.getlogger(InfrastructureModels), "error")
+    Memento.setlevel!(Memento.getlogger(PowerParsers), "error")
 end
 
-#=
-    PSSE
-=#
-
-function _parse_psse(datafile::String)
-    return PowerFlowData.parse_network(datafile)
+"alows the user to set the logging level without the need to add Memento"
+function logger_config!(level)
+    Memento.config!(Memento.getlogger("PowerModels"), level)
 end
 
-function power_parse(datafile::String)
-    if endswith(datafile, ".raw")
-        return _parse_psse(datafile)
-    elseif endswith(datafile, ".m")
-        return _parse_matpower(datafile)
-    else
-        error("Supported extensions are `.raw` (PSSE) and `.m` (MATPOWER)")
-    end
-end
+const _pm_global_keys = Set(["time_series", "per_unit"])
+const pm_it_name = "pm"
+const pm_it_sym = Symbol(pm_it_name)
+
+include("io/matpower.jl")
+include("io/common.jl")
+include("io/pti.jl")
+include("io/psse.jl")
+
+include("core/data.jl")
 
 end # module
