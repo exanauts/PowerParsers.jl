@@ -1,10 +1,6 @@
 module PowerParsers
 
-
 import Memento
-
-import InfrastructureModels
-const _IM = InfrastructureModels
 
 const _LOGGER = Memento.getlogger(@__MODULE__)
 
@@ -15,7 +11,6 @@ __init__() = Memento.register(_LOGGER)
 "Suppresses information and warning messages output by PowerModels, for fine grained control use the Memento package"
 function silence()
     Memento.info(_LOGGER, "Suppressing information and warning messages for the rest of this session.  Use the Memento package for more fine-grained control of logging.")
-    Memento.setlevel!(Memento.getlogger(InfrastructureModels), "error")
     Memento.setlevel!(Memento.getlogger(PowerParsers), "error")
 end
 
@@ -28,6 +23,7 @@ const _pm_global_keys = Set(["time_series", "per_unit"])
 const pm_it_name = "pm"
 const pm_it_sym = Symbol(pm_it_name)
 
+include("im_io/IM.jl")
 include("io/matpower.jl")
 include("io/common.jl")
 include("io/pti.jl")
